@@ -1,3 +1,6 @@
+import time
+
+
 class SentenceManager:
     def __init__(self):
         self.__sentences = []
@@ -11,6 +14,14 @@ class SentenceManager:
             if sentence != '':
                 sentences_temp.append(sentence)
         self.__sentences = sentences_temp
+
+    def set_current_line(self, n):
+        for index, sentence in enumerate(self.__sentences):
+            n -= len(sentence) + 1
+            if n < 0:
+                self.__current_line = index
+                self.current_line_changed(self.__current_line)
+                break
 
     @staticmethod
     def clean_sentence(s):
@@ -39,6 +50,10 @@ class SentenceManager:
     def sentences(self):
         return '\n'.join(self.__sentences)
 
+    @property
+    def len(self):
+        return len(self.__sentences)
+
     ###############################
     # commands
     ###############################
@@ -59,12 +74,24 @@ class SentenceManager:
             name = name.replace('\n', '', len(name)).replace('\r', '', len(name))
             self.__sentences[self.__current_line] = '[%s] ' % name + self.clean_sentence(self.__sentences[self.__current_line])
             self.sentence_changed()
+            time.sleep(0.01)
+            self.increment()
+
+    def make_paragraph(self):
+        self.__sentences.insert(self.__current_line, '------------------------')
+        self.sentence_changed()
+
+    def join(self):
+        self.__sentences[self.__current_line] += ' '
+        self.__sentences[self.__current_line] += self.clean_sentence(self.__sentences[self.__current_line+1])
+        del self.__sentences[self.__current_line+1]
+        self.sentence_changed()
 
     def clean(self):
         self.__sentences[self.__current_line] =  self.clean_sentence(self.__sentences[self.__current_line])
         self.sentence_changed()
 
-
+    ############################
     def sentence_changed(self):
         pass
     def current_line_changed(self, n):

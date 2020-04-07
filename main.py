@@ -5,6 +5,7 @@ from ScriptMakingHelper import sentenceanager
 from PyQt5 import uic
 from PyQt5.QtCore import QEvent, QTimer
 from PyQt5.QtWidgets import QApplication, QWidget
+import time
 
 main_form_class = uic.loadUiType('Form.ui')[0]
 
@@ -19,6 +20,10 @@ class Highlighter(QtGui.QSyntaxHighlighter):
     def highlightBlock(self, text):
         if self.currentBlock().firstLineNumber() == self.__highlight_line:
             self.setFormat(0, len(text), self.sectionFormat)
+
+    @property
+    def highlight_line(self):
+        return self.__highlight_line
 
     def set_highlight_line(self, value):
         self.__highlight_line = value
@@ -52,6 +57,11 @@ class MainWindow(QMainWindow, main_form_class):
         self.textEdit_script.textChanged.connect(self.textChanged)
         self.manager.current_line_changed = self.current_line_changed
         self.manager.sentence_changed = self.set_script
+
+        # self.textEdit_script.cursorPositionChanged = self.cursorPositionChanged
+        self.textEdit_script.cursorPositionChanged.connect(self.cursorPositionChanged)
+        self.textEdit_script.selectionChanged.connect(self.selectionChanged)
+
 
         # lineEdit
         self.lineEdits = {}
@@ -87,7 +97,11 @@ class MainWindow(QMainWindow, main_form_class):
         self.commands['a'] = lambda: self.manager.decrement()
         self.commands['d'] = lambda: self.manager.increment()
         self.commands['x'] = lambda: self.manager.erase_current_line()
-        self.commands['c'] = lambda: self.manager.clean()
+        self.commands['v'] = lambda: self.manager.clean()
+        self.commands[' '] = lambda: self.manager.join()
+        self.commands['n'] = lambda: self.manager.make_paragraph()
+        self.commands['s'] = lambda: self.save()
+        self.commands['/'] = lambda: self.set_script()
         for key, lineEdit in self.lineEdits.items():
             self.commands[key] = (lambda e: (lambda: self.manager.set_who_is_saying(e.text())))(lineEdit)
 
@@ -104,6 +118,9 @@ class MainWindow(QMainWindow, main_form_class):
             pass
 
     def closeEvent(self, QCloseEvent):
+        self.save()
+
+    def save(self):
         with open('characters.txt', 'w') as f:
             for key, lineEdit in self.lineEdits.items():
                 f.write(lineEdit.text() + '\n')
@@ -130,11 +147,40 @@ class MainWindow(QMainWindow, main_form_class):
             else:
                 self.label_focus_state.setText('')
         return super(MainWindow, self).eventFilter(obj, event)
+
+    # QTextEdit.cursorPositionChanged()
+    def cursorPositionChanged(self):
+        pass
+
+    def selectionChanged(self):
+        self.manager.set_current_line(self.textEdit_script.textCursor().position())
+        pass
+
+    # print(self.textEdit_script.)
     # callback functions
     ########################################
 
+    # def set_scroll(self):
+    #     # TODO
+    #     scroll = self.textEdit_script.verticalScrollBar()
+    #     minimum = scroll.minimum()
+    #     maximum = scroll.maximum()
+    #     step = scroll.pageStep()
+    #     # length = maximum - minimum + step
+    #     length = maximum - minimum
+    #
+    #     # value = length * self.highlighter.highlight_line / self.manager.len
+    #     value = length * self.highlighter.highlight_line / self.textEdit_script.document().blockCount()
+    #     # value = length * self.highlighter.highlight_line / self.textEdit_script
+    #
+    #     # print('%d %d %d %d %d %d ' %(minimum, maximum, step, length, self.highlighter.highlight_line,  value))
+    #
+    #     self.textEdit_script.verticalScrollBar().setValue(value)
+
     def set_script(self):
+        value = self.textEdit_script.verticalScrollBar().value()
         self.textEdit_script.setText(self.manager.sentences)
+        self.textEdit_script.verticalScrollBar().setValue(value)
 
     def current_line_changed(self, n):
         self.highlighter.set_highlight_line(n)
